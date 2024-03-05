@@ -1,5 +1,6 @@
 package fot
 
+import fot.ResponseItem.*
 import fot.pgp.pgpSign
 import fot.pgp.pgpVerify
 import kotlinx.serialization.encodeToString
@@ -145,7 +146,7 @@ class Victor(val message: Message, val participants: Participants) {
         val k = challenge.size
         repeat(k) { i ->
             if (challenge[i] == 0) {
-                val peggyBlindingFactor = response[i] as Double
+                val peggyBlindingFactor = (response[i] as BlindingFactor).blindingFactor
                 val reblindedVerifierHashes = mutableSetOf<String>()
                 trustedVerifiers.forEach { verifierKey ->
                     reblindedVerifierHashes.add(fotHash(blindFotPublicKey(verifierKey, peggyBlindingFactor)))

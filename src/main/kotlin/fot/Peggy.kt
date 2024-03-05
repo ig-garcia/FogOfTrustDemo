@@ -1,5 +1,7 @@
 package fot
 
+import fot.ResponseItem.BlindedAttestersAndSalt
+import fot.ResponseItem.BlindingFactor
 import fot.pgp.pgpSign
 import fot.pgp.pgpVerify
 import kotlinx.serialization.encodeToString
@@ -132,10 +134,10 @@ class Peggy(val message: Message) {
         val salt = session.salt
         val challenge = stepThreeMessage.challenge
 
-        val response = mutableListOf<Any>()
+        val response = mutableListOf<ResponseItem>()
         repeat(k) { i ->
             if (challenge[i] == 0) {
-                response.add(blindingFactors[i])
+                response.add(BlindingFactor(blindingFactors[i]))
             } else {
                 response.add(BlindedAttestersAndSalt(blindedAttesters[i], salt[i]))
             }
@@ -169,5 +171,5 @@ data class PeggySession(
     val reBlindedVerifierHashes: List<Set<String>>,
     val message: Message,
     val challenge: List<Int> = emptyList(),
-    val response: List<Any> = emptyList(),
+    val response: List<ResponseItem> = emptyList(),
 )

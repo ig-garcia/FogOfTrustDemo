@@ -36,6 +36,6 @@ data class StepThreeMessage(
 
 data class StepFourMessage(
     val sessionId: String,
-    val response: List<Any>,
+    val response: List<ResponseItem>,
     val pgpSignature: PgpSignature,
 )

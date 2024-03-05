@@ -27,7 +27,12 @@ data class Message(val from: String, val to: String, val content: String)
 data class Attester(val fotSignature: FotSignature, val fotPublicKey: FotPublicKey)
 
 @Serializable
-data class BlindedAttestersAndSalt(
-    val blindedAttesters: Set<Attester>,
-    val salt: String,
-)
+sealed interface ResponseItem {
+    @Serializable
+    data class BlindingFactor(val blindingFactor: Double): ResponseItem
+    @Serializable
+    data class BlindedAttestersAndSalt(
+        val blindedAttesters: Set<Attester>,
+        val salt: String,
+    ): ResponseItem
+}
