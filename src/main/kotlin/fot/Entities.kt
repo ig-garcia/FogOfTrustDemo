@@ -9,10 +9,10 @@ data class Participants(
 )
 
 @Serializable
-data class PgpPublicKey(val key: String, val blindFactor: Double = 0.0)
+data class PgpPublicKey(val key: String)
 data class PgpPrivateKey(val key: String)
 @Serializable
-data class PgpSignature(val signature: String, val blindFactor: Double = 0.0)
+data class PgpSignature(val signature: String)
 
 @Serializable
 data class FotPublicKey(val key: String, val blindFactor: Double = 0.0)
