@@ -11,8 +11,8 @@ class FotDemo {
     private val k = 3
     private val saltLength = 4
 
-    fun fot(): Set<String> {
-        stepZero()
+    fun fot(message: Message): Set<String> {
+        stepZero(message)
         stepOne()
         stepTwo(fotMessages[0] as StepOneMessage)
         stepThree(fotMessages[1] as StepTwoMessage)
@@ -21,7 +21,21 @@ class FotDemo {
         return trust
     }
 
-    fun stepZero() { // this is the "Preliminaries" of the thesis.
+    /**
+     * Step Zero
+     *
+     * Roles:
+     * - Peggy wants to be trusted, so she sends her message (in PGP case a public key certificate) to partners for signing.
+     * - Walter **fot signs** Peggy's message, becoming an attester for Peggy's identity in this message.
+     * - Victor wants to find trusted verifiers (trusted attesters public keys) to verify the messages they attest.
+     *
+     *
+     * - Victor adds the participants
+     * - Peggy sends the message to Walter for signing.
+     * - Walter **fot signs** the message and sends the signature and his public key to Peggy.
+     * - Walter sends his **fot public key** to Victor: Walter wants to become a trusted verifier.
+     */
+    fun stepZero(message: Message) { // this is the "Preliminaries" of the thesis.
         walter = Walter()
         peggy = Peggy(message)
         victor = Victor(message, Participants(prover = "Peggy", verifier = "Victor"))
@@ -32,6 +46,11 @@ class FotDemo {
         victor.stepZeroAddWalterVerifier(stepZeroMessageWalterToVictor)
     }
 
+    /**
+     * Step One
+     *
+     * - Victor starts the session
+     */
     fun stepOne() {
         val stepOneMessage = victor.stepOne()
         fotMessages.add(stepOneMessage)
