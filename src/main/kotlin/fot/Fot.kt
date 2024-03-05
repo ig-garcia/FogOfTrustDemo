@@ -5,8 +5,16 @@ class FotDemo {
     private lateinit var peggy: Peggy
     private lateinit var victor: Victor
     private val fotMessages = mutableListOf<Any>()
-    private val k = 3
-    private val saltLength = 4
+
+    /**
+     * Number of commitments Peggy produces and sends to Victor
+     */
+    private val k = 3 // change this two params to desired value
+
+    /**
+     * Length of Peggy's salt (vector of random bits)
+     */
+    private val saltLength = 4 // change this two params to desired value
 
     /**
      * FOT algorithm high-level description
