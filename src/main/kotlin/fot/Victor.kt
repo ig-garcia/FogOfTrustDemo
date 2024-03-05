@@ -58,7 +58,7 @@ class Victor(val message: Message, val participants: Participants) {
      *      - Challenge vector
      */
     fun stepThree(stepTwoMessage: StepTwoMessage): StepThreeMessage {
-        assert(pgpVerify(stepTwoMessage.pgpSignature, stepTwoMessage.pgpPublicKey, stepTwoMessage.reBlindedVerifierHashes))
+        require(pgpVerify(stepTwoMessage.pgpSignature, stepTwoMessage.pgpPublicKey, stepTwoMessage.reBlindedVerifierHashes))
         peggyPgpPublicKey = stepTwoMessage.pgpPublicKey
         val sessionId = stepTwoMessage.sessionId
         val session = sessions.first { it.sessionId == sessionId }
@@ -66,9 +66,7 @@ class Victor(val message: Message, val participants: Participants) {
         val blindFactor = session.blindFactor
         val challenge = session.challenge.toMutableList()
         if (challenge.isEmpty()) {
-            repeat(k) {
-                challenge.add(randomBit())
-            }
+            challenge.addAll(generateChallengeVector(k))
         }
         val signatureStepThree = pgpSign("$sessionId@#~${Json.encodeToString(challenge)}", pgpPrivateKey)
         val newSession = VictorSession(
@@ -94,7 +92,7 @@ class Victor(val message: Message, val participants: Participants) {
      *
      * - Victor gets Peggy's message from step 2 and PGP-verifies it
      * - Victor recovers data from his saved session and the message from Peggy.
-     * - Victor initializes a trust set with -1
+     * - Victor initializes a trust integer value with -1
      * - Victor iterates his challenge vector and Peggy's response:
      *      - when vector element is 0, the response element is Peggy's blinding factor for that commitment set.
      *          - Victor uses this blinding factor to reconstruct the set of hashes of re-blinded verifiers.
@@ -108,9 +106,9 @@ class Victor(val message: Message, val participants: Participants) {
      *                  - each Peggy's blinded attester's **fot** public keys as verifiers
      *                  - his own blind factor
      *          - Victor asserts that his reconstructed blinded attester hash set match Peggy's blinded attester hash set
-     *          - If trust set is -1 (is still not set), then it is set to the intersection of the
+     *          - If trust value is -1 (is still not set), then it is set to the **size of the intersection** of the
      *          reconstructed re-blinded verifier hash set and Peggy's re-blinded verifier hash set.
-     *          - If trust set is already set, then assert it is equal to the intersection of the
+     *          - If trust value is already set, then assert it is equal to the **size of the intersection** of the
      *          reconstructed re-blinded verifier hash set and Peggy's re-blinded verifier hash set.
      *
      *          Why should the intersection of the reconstructed re-blinded verifier hash set and Peggy's
@@ -124,7 +122,7 @@ class Victor(val message: Message, val participants: Participants) {
      *              should be equal. One was blinded by Victor and re-blinded by Peggy, and the other one was
      *              blinded by Peggy and re-blinded by Victor.
      *
-     * - The trust set is the trust value of the message and the return of the fot algorithm.
+     * - The trust value is the trust value of the message and the return of the fot algorithm.
      *
      * - **I saw a catch**: When Victor generates the random bit **challenge vector**,
      * he should try several times until the vector **has at least one bit with value 1**.
@@ -132,43 +130,45 @@ class Victor(val message: Message, val participants: Participants) {
      * the return would be -1.
      *
      */
-    fun stepFive(stepFourMessage: StepFourMessage): Set<String> {
-        assert(pgpVerify(stepFourMessage.pgpSignature, peggyPgpPublicKey, stepFourMessage.response))
+    fun stepFive(stepFourMessage: StepFourMessage): Int {
+        require(pgpVerify(stepFourMessage.pgpSignature, peggyPgpPublicKey, stepFourMessage.response))
         val sessionId = stepFourMessage.sessionId
         val session = sessions.first { it.sessionId == sessionId }
         val challenge = session.challenge
+        println("challenge: $challenge")
         val response = stepFourMessage.response
         val peggyReblindedVerifierHashes = session.reBlindedVerifierHashes
         val peggyBlindedAttesterHashes = session.blindedAttesterHashes
-        assert(challenge.isNotEmpty())
-        var trust: Set<String> = setOf("-1")
+        val blindedVerifiers = session.blindedVerifiers
+        require(challenge.isNotEmpty())
+        var trust = -1
         val victorBlindFactor = session.blindFactor
         val k = challenge.size
         repeat(k) { i ->
             if (challenge[i] == 0) {
                 val peggyBlindingFactor = (response[i] as BlindingFactor).blindingFactor
-                val reblindedVerifierHashes = mutableSetOf<String>()
-                trustedVerifiers.forEach { verifierKey ->
-                    reblindedVerifierHashes.add(fotHash(blindFotPublicKey(verifierKey, peggyBlindingFactor)))
+                val reblindedVerifierHashSet = mutableSetOf<String>()
+                blindedVerifiers.forEach { verifierKey ->
+                    reblindedVerifierHashSet.add(fotHash(Json.encodeToString(blindFotPublicKey(verifierKey, peggyBlindingFactor))))
                 }
                 // VERIFICATION IS DONE WITH RE-BLINDED VERIFIER HASHES WHEN CHALLENGE BIT IS 0
-                assert(reblindedVerifierHashes == peggyReblindedVerifierHashes[i])
+                require(reblindedVerifierHashSet == peggyReblindedVerifierHashes[i])
             } else {
                 val (peggyBlindedAttesters, salt) = response[i] as BlindedAttestersAndSalt
-                val reblindedVerifierHashes = mutableSetOf<String>()
-                val blindedAttesterHashes = mutableSetOf<String>()
+                val reblindedVerifierHashSet = mutableSetOf<String>()
+                val blindedAttesterHashSet = mutableSetOf<String>()
                 peggyBlindedAttesters.forEach { attester ->
                     val (signature, publicKey) = attester
                     // VERIFICATION IS DONE WITH BLINDED SIGNATURE AND PUBLIC KEY WHEN CHALLENGE BIT IS 1
-                    assert(fotVerify(signature, publicKey, message))
-                    blindedAttesterHashes.add(fotHash("${Json.encodeToString(attester)}@#~$salt"))
-                    reblindedVerifierHashes.add(fotHash(blindFotPublicKey(publicKey, victorBlindFactor)))
+                    require(fotVerify(signature, publicKey, message))
+                    blindedAttesterHashSet.add(fotHash("${Json.encodeToString(attester)}@#~$salt"))
+                    reblindedVerifierHashSet.add(fotHash(Json.encodeToString(blindFotPublicKey(publicKey, victorBlindFactor))))
                 }
-                assert(blindedAttesterHashes == peggyBlindedAttesterHashes)
-                if (trust == setOf("-1")) {
-                    trust = reblindedVerifierHashes.intersect(peggyReblindedVerifierHashes[i]) // assign trust first time
+                require(blindedAttesterHashSet == peggyBlindedAttesterHashes[i])
+                if (trust == -1) {
+                    trust = (reblindedVerifierHashSet.intersect(peggyReblindedVerifierHashes[i])).size // assign trust first time
                 } else {
-                    assert(trust == reblindedVerifierHashes.intersect(peggyReblindedVerifierHashes[i])) // verify its same trust next times
+                    require(trust == (reblindedVerifierHashSet.intersect(peggyReblindedVerifierHashes[i]).size)) // verify its same trust next times
                 }
             }
         }

@@ -56,7 +56,7 @@ class Peggy(val message: Message) {
         // here we get the public key from "TOFU" message from Victor
         victorPgpPublicKey = stepOneMessage.pgpPublicKey
         val signatureStepOne = stepOneMessage.pgpSignature
-        assert(pgpVerify(signatureStepOne, victorPgpPublicKey, stepOneMessage.blindedVerifiers))
+        require(pgpVerify(signatureStepOne, victorPgpPublicKey, stepOneMessage.blindedVerifiers))
         val blindedVerifiers = stepOneMessage.blindedVerifiers
         val blindingFactors = mutableListOf<Double>()
         val salt = mutableListOf<String>()
@@ -72,7 +72,7 @@ class Peggy(val message: Message) {
             attesters[message]!!.forEach { attester ->
                 val blindedAttester = blindAttester(attester, blindingFactors[i])
                 blindedAttesterSet.add(blindedAttester)
-                blindedAttesterHashSet.add(fotHash(Json.encodeToString(blindedAttester) + salt[i]))
+                blindedAttesterHashSet.add(fotHash("${Json.encodeToString(blindedAttester)}@#~${salt[i]}"))
             }
             blindedVerifiers.forEach { publicKey ->
                 reblindedVerifierHashSet.add(fotHash(Json.encodeToString(blindFotPublicKey(publicKey, blindingFactors[i]))))
@@ -126,7 +126,7 @@ class Peggy(val message: Message) {
      *      - response
      */
     fun stepFour(stepThreeMessage: StepThreeMessage): StepFourMessage {
-        assert(pgpVerify(stepThreeMessage.pgpSignature, victorPgpPublicKey, stepThreeMessage.challenge))
+        require(pgpVerify(stepThreeMessage.pgpSignature, victorPgpPublicKey, stepThreeMessage.challenge))
         val session = sessions.first { it.sessionId == stepThreeMessage.sessionId }
         val sessionId = session.sessionId
         val blindingFactors = session.blindingFactors

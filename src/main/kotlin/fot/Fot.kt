@@ -8,7 +8,7 @@ class FotDemo {
     private val k = 3
     private val saltLength = 4
 
-    fun fot(message: Message): Set<String> {
+    fun fot(message: Message): Int {
         stepZero(message)
         stepOne()
         stepTwo(fotMessages[0] as StepOneMessage)
@@ -43,11 +43,6 @@ class FotDemo {
         victor.stepZeroAddWalterVerifier(stepZeroMessageWalterToVictor)
     }
 
-    /**
-     * Step One
-     *
-     * - Victor starts the session
-     */
     fun stepOne() {
         val stepOneMessage = victor.stepOne()
         fotMessages.add(stepOneMessage)
@@ -68,7 +63,7 @@ class FotDemo {
         fotMessages.add(stepFourMessage)
     }
 
-    fun stepFive(stepFourMessage: StepFourMessage): Set<String> {
+    fun stepFive(stepFourMessage: StepFourMessage): Int {
         return victor.stepFive(stepFourMessage)
     }
 }

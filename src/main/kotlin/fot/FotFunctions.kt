@@ -16,16 +16,8 @@ fun fotVerify(fotSignature: FotSignature, fotPublicKey: FotPublicKey, content: A
     return true
 }
 
-fun blindPublicKey(pgpPublicKey: PgpPublicKey, blindFactor: Double): PgpPublicKey {
-    return PgpPublicKey(pgpPublicKey.key, pgpPublicKey.blindFactor + blindFactor)
-}
-
 fun blindFotPublicKey(fotPublicKey: FotPublicKey, blindFactor: Double): FotPublicKey {
     return FotPublicKey(fotPublicKey.key, fotPublicKey.blindFactor + blindFactor)
-}
-
-fun blindSignature(pgpSignature: PgpSignature, blindFactor: Double): PgpSignature {
-    return PgpSignature(pgpSignature.signature, pgpSignature.blindFactor + blindFactor)
 }
 
 fun blindFotSignature(fotSignature: FotSignature, blindFactor: Double): FotSignature {
