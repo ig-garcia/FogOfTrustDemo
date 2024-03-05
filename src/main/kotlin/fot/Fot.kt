@@ -8,6 +8,46 @@ class FotDemo {
     private val k = 3
     private val saltLength = 4
 
+    /**
+     * FOT algorithm high-level description
+     *
+     * - Read step Zero description.
+     * - Step One:
+     *      - Victor starts the process, generates session id, sends his blinded verifiers to Peggy.
+     * - Step Two:
+     *      - Peggy generates a vector of blinding factors of size k.
+     *      - Peggy generates k commitment pairs:
+     *          - Commitment of Peggy's own hashed blinded attesters with "alpha"-long bits salt
+     *          - Commitment of Victor's hashed re-blinded verifiers
+     *      - Peggy sends commitments to Victor.
+     * - Step Three:
+     *      - Victor generates a challenge vector of k random bits and sends it to Peggy.
+     * - Step Four:
+     *      - Peggy generates a response vector of k elements:
+     *          - If Victor's challenge vector element is 0, response element is
+     *          Peggy's blinding factor for that element.
+     *          - If Victor's challenge vector element is 1, response element is
+     *          the blinded attester and the salt for that element.
+     *      - Peggy sends the response vector to Victor.
+     * - Step Five:
+     *      - Victor iterates Peggy's response and his challenge vector:
+     *      - In each case he reconstructs Peggy's commitments in a different way depending on
+     *      the value of current challenge vector element.
+     *      - Victor asserts that his reconstructed commitments match Peggy's original commitments.
+     *      - Only in the cases when the challenge vector element value is 1, the trust value
+     *      (aka the output of the algorithm) is assigned, and in successive 1 values it is checked.
+     *
+     * - Comments: Observe how the participants (Victor and Peggy) only interact using:
+     *      - hashes
+     *      - blinding factors
+     *      - blinded attesters
+     *      - blinded public keys
+     *
+     *      - This means "zero knowledge proof" (ZKP) is achieved because no sensitive information
+     *      is known by other than the owner of such information.
+     *      - Observe PGP operations (sign, verify) and keys are used, but just as a means to
+     *      protect the communication channel. The real verification has nothing to do with them.
+     */
     fun fot(message: Message): Int {
         stepZero(message)
         stepOne()
