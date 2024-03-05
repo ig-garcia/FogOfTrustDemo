@@ -1,8 +1,5 @@
 package fot
 
-private val message = Message(from = "Peggy", to = "Walter", content = "messageContent")
-
-
 class FotDemo {
     private lateinit var walter: Walter
     private lateinit var peggy: Peggy
@@ -79,5 +76,7 @@ class FotDemo {
 
 
 fun main() {
-
+    val message = Message(from = "Peggy", to = "Walter", content = "messageContent")
+    val result = FotDemo().fot(message)
+    println("fot result: $result")
 }
