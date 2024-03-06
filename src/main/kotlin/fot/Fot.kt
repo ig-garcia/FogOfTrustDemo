@@ -4,7 +4,7 @@ class FotDemo {
     private lateinit var walter: Walter
     private lateinit var peggy: Peggy
     private lateinit var victor: Victor
-    private val fotMessages = mutableListOf<Any>()
+    private val fotMessages = mutableListOf<String>()
 
     /**
      * Number of commitments Peggy produces and sends to Victor
@@ -59,10 +59,10 @@ class FotDemo {
     fun fot(message: Message): Int {
         stepZero(message)
         stepOne()
-        stepTwo(fotMessages[0] as StepOneMessage)
-        stepThree(fotMessages[1] as StepTwoMessage)
-        stepFour(fotMessages[2] as StepThreeMessage)
-        val trust = stepFive(fotMessages[3] as StepFourMessage)
+        stepTwo(fotMessages[0])
+        stepThree(fotMessages[1])
+        stepFour(fotMessages[2])
+        val trust = stepFive(fotMessages[3])
         return trust
     }
 
@@ -96,22 +96,22 @@ class FotDemo {
         fotMessages.add(stepOneMessage)
     }
 
-    fun stepTwo(stepOneMessage: StepOneMessage) {
+    fun stepTwo(stepOneMessage: String) {
         val stepTwoMessage = peggy.stepTwo(stepOneMessage, k, saltLength)
         fotMessages.add(stepTwoMessage)
     }
 
-    fun stepThree(stepTwoMessage: StepTwoMessage) {
+    fun stepThree(stepTwoMessage: String) {
         val stepThreeMessage = victor.stepThree(stepTwoMessage)
         fotMessages.add(stepThreeMessage)
     }
 
-    fun stepFour(stepThreeMessage: StepThreeMessage) {
+    fun stepFour(stepThreeMessage: String) {
         val stepFourMessage = peggy.stepFour(stepThreeMessage)
         fotMessages.add(stepFourMessage)
     }
 
-    fun stepFive(stepFourMessage: StepFourMessage): Int {
+    fun stepFive(stepFourMessage: String): Int {
         return victor.stepFive(stepFourMessage)
     }
 }

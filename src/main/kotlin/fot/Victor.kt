@@ -1,15 +1,15 @@
 package fot
 
 import fot.ResponseItem.*
-import fot.pgp.pgpSign
-import fot.pgp.pgpVerify
+import fot.pgp.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class Victor(val message: Message, val participants: Participants) {
     private val trustedVerifiers = mutableSetOf<FotPublicKey>()
-    private val pgpPublicKey = PgpPublicKey("VictorPublicKey")
-    private val pgpPrivateKey = PgpPrivateKey("VictorPrivateKey")
+    private val pgpKeyPair = generateKeyPair("victor@fot.sample")
+    private val pgpPublicKey = pgpKeyPair.publicKey
+    private val pgpPrivateKey = pgpKeyPair.privateKey
     private val sessions = mutableListOf<VictorSession>()
     private lateinit var peggyPgpPublicKey: PgpPublicKey
 
@@ -28,22 +28,34 @@ class Victor(val message: Message, val participants: Participants) {
      *      - Session id
      *      - His blinded verifiers (attester public keys)
      */
-    fun stepOne(): StepOneMessage {
+    fun stepOne(): String {
         val blindFactor = blindFactGen()
         val blindedVerifiers = mutableSetOf<FotPublicKey>()
         trustedVerifiers.forEach { pk ->
             blindedVerifiers.add(blindFotPublicKey(pk, blindFactor))
         }
         val sessionId = fotHash(Json.encodeToString(participants) + Json.encodeToString(message))
-        val signatureStepOne = pgpSign("$sessionId@#~${Json.encodeToString(blindedVerifiers)}", pgpPrivateKey)
+
         val session = VictorSession(
-            sessionId,
-            blindFactor,
-            blindedVerifiers,
-            pgpPublicKey
+            sessionId = sessionId,
+            blindFactor = blindFactor,
+            blindedVerifiers = blindedVerifiers,
+            pgpPublicKey = pgpPublicKey
         )
         store(session)
-        return StepOneMessage(sessionId, pgpPublicKey, blindedVerifiers, signatureStepOne)
+        val stepOneMessage = StepOneMessage(
+            sessionId = sessionId,
+            pgpPublicKey = pgpPublicKey,
+            blindedVerifiers = blindedVerifiers
+        )
+        val signedMessage = pgp_Sign(Json.encodeToString(stepOneMessage), pgpPrivateKey)
+
+        return Json.encodeToString(
+            StepOneSignedMessage(
+                stepOneMessage = signedMessage,
+                pgpPublicKey = pgpPublicKey
+            )
+        )
     }
 
     /**
@@ -57,9 +69,16 @@ class Victor(val message: Message, val participants: Participants) {
      *      - Session id
      *      - Challenge vector
      */
-    fun stepThree(stepTwoMessage: StepTwoMessage): StepThreeMessage {
-        require(pgpVerify(stepTwoMessage.pgpSignature, stepTwoMessage.pgpPublicKey, stepTwoMessage.reBlindedVerifierHashes))
-        peggyPgpPublicKey = stepTwoMessage.pgpPublicKey
+    fun stepThree(stepTwoSignedMessageText: String): String {
+        val stepTwoSignedMessage = Json.decodeFromString<StepTwoSignedMessage>(stepTwoSignedMessageText)
+        peggyPgpPublicKey = stepTwoSignedMessage.pgpPublicKey
+        val stepTwoMessage = Json.decodeFromString<StepTwoMessage>(
+            pgpVerify(
+                signedMessage = stepTwoSignedMessage.stepTwoMessage,
+                publicKey = peggyPgpPublicKey
+            ).decodeToString()
+        )
+
         val sessionId = stepTwoMessage.sessionId
         val session = sessions.first { it.sessionId == sessionId }
         val k = stepTwoMessage.blindedAttesterHashes.size
@@ -68,7 +87,6 @@ class Victor(val message: Message, val participants: Participants) {
         if (challenge.isEmpty()) {
             challenge.addAll(generateChallengeVector(k))
         }
-        val signatureStepThree = pgpSign("$sessionId@#~${Json.encodeToString(challenge)}", pgpPrivateKey)
         val newSession = VictorSession(
             sessionId = sessionId,
             blindFactor = blindFactor,
@@ -80,10 +98,14 @@ class Victor(val message: Message, val participants: Participants) {
             message = message
         )
         store(newSession)
-        return StepThreeMessage(
-            sessionId,
-            challenge,
-            signatureStepThree
+        val stepThreeMessage = StepThreeMessage(
+            sessionId = sessionId,
+            challenge = challenge,
+        )
+        return pgpEncryptAndSign(
+            input = Json.encodeToString(stepThreeMessage),
+            recipientPgpPublicKey = peggyPgpPublicKey,
+            ownPrivateKey = pgpPrivateKey
         )
     }
 
@@ -130,8 +152,13 @@ class Victor(val message: Message, val participants: Participants) {
      * the return would be -1.
      *
      */
-    fun stepFive(stepFourMessage: StepFourMessage): Int {
-        require(pgpVerify(stepFourMessage.pgpSignature, peggyPgpPublicKey, stepFourMessage.response))
+    fun stepFive(stepFourEncryptedMessageText: String): Int {
+        val messagePlainText = pgpDecryptAndVerify(
+            input = stepFourEncryptedMessageText,
+            ownPgpPrivateKey = pgpPrivateKey,
+            senderPgpPublicKey = peggyPgpPublicKey
+        )
+        val stepFourMessage = Json.decodeFromString<StepFourMessage>(messagePlainText)
         val sessionId = stepFourMessage.sessionId
         val session = sessions.first { it.sessionId == sessionId }
         val challenge = session.challenge

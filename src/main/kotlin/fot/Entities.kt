@@ -11,6 +11,9 @@ data class Participants(
 @Serializable
 data class PgpPublicKey(val key: String)
 data class PgpPrivateKey(val key: String)
+
+data class PgpKeyPair(val privateKey: PgpPrivateKey, val publicKey: PgpPublicKey)
+
 @Serializable
 data class PgpSignature(val signature: String)
 

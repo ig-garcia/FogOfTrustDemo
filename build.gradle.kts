@@ -14,8 +14,13 @@ repositories {
 }
 
 dependencies {
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-    implementation("org.pgpainless:pgpainless-core:1.6.6")
+    // https://mvnrepository.com/artifact/org.pgpainless/pgpainless-sop
+    implementation("org.pgpainless:pgpainless-sop:1.6.6")
+
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-jdk14
+    implementation("org.slf4j:slf4j-jdk14:2.0.12")
     testImplementation(kotlin("test"))
 }
 
