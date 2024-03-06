@@ -5,9 +5,13 @@ import fot.pgp.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-class Victor(val message: Message, val participants: Participants) {
+class Victor(
+    private val message: Message,
+    private val participants: Participants,
+    email: String = "victor@fot.sample",
+) {
     private val trustedVerifiers = mutableSetOf<FotPublicKey>()
-    private val pgpKeyPair = generateKeyPair("victor@fot.sample")
+    private val pgpKeyPair = generatePgpKeyPair(email)
     private val pgpPublicKey = pgpKeyPair.publicKey
     private val pgpPrivateKey = pgpKeyPair.privateKey
     private val sessions = mutableListOf<VictorSession>()
@@ -15,6 +19,7 @@ class Victor(val message: Message, val participants: Participants) {
 
     fun stepZeroAddWalterVerifier(stepZeroMessage: StepZeroMessageWalterToVictor) {
         trustedVerifiers.add(stepZeroMessage.walterFotPublicKey)
+        println("trustedVerifiers: $trustedVerifiers")
     }
 
     /**

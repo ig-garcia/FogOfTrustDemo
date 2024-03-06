@@ -3,9 +3,11 @@ package fot
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-class Walter {
-    private val fotPublicKey = FotPublicKey("WalterPublicKey")
-    private val fotPrivateKey = FotPrivateKey("WalterPrivateKey")
+class Walter(
+    email: String = "walter@fot.demo"
+) {
+    private val fotPublicKey = FotPublicKey("${email}PublicKey")
+    private val fotPrivateKey = FotPrivateKey("${email}PrivateKey")
 
     fun signMessageAndSendToPeggy(stepZeroMessage: StepZeroMessagePeggyToWalter): StepZeroMessageWalterToPeggy  {
         val messageSignature = fotSign(Json.encodeToString(stepZeroMessage.message), fotPrivateKey)

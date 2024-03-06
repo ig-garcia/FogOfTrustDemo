@@ -6,9 +6,12 @@ import fot.pgp.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-class Peggy(val message: Message) {
+class Peggy(
+    private val message: Message,
+    email: String = "peggy@fot.sample",
+) {
     private val attesters = mutableMapOf<Message, MutableSet<Attester>>(message to mutableSetOf()) // attesters are in the scope of a specific messsage
-    private val pgpKeyPair = generateKeyPair("peggy@fot.sample")
+    private val pgpKeyPair = generatePgpKeyPair(email)
     private val pgpPublicKey = pgpKeyPair.publicKey
     private val pgpPrivateKey = pgpKeyPair.privateKey
     private val sessions = mutableListOf<PeggySession>()

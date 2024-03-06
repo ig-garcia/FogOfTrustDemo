@@ -1,7 +1,6 @@
 package fot
 
 class FotDemo {
-    private lateinit var walter: Walter
     private lateinit var peggy: Peggy
     private lateinit var victor: Victor
     private val fotMessages = mutableListOf<String>()
@@ -9,12 +8,17 @@ class FotDemo {
     /**
      * Number of commitments Peggy produces and sends to Victor
      */
-    private val k = 3 // change this two params to desired value
+    private val k = 8 // change this two params to desired value
 
     /**
      * Length of Peggy's salt (vector of random bits)
      */
     private val saltLength = 4 // change this two params to desired value
+
+    /**
+     * Number of attesters, they are called Walter1, Walter2...
+     */
+    private val howManyAttesters = 3
 
     /**
      * FOT algorithm high-level description
@@ -81,14 +85,16 @@ class FotDemo {
      * - Walter sends his **fot public key** to Victor: Walter wants to become a trusted verifier.
      */
     fun stepZero(message: Message) { // this is the "Preliminaries" of the thesis.
-        walter = Walter()
         peggy = Peggy(message)
         victor = Victor(message, Participants(prover = "Peggy", verifier = "Victor"))
-        val stepZeroMessagePeggyToWalter = peggy.stepZeroSendMessageToWalter()
-        val stepZeroMessageWalterToPeggy = walter.signMessageAndSendToPeggy(stepZeroMessagePeggyToWalter)
-        peggy.stepZeroAddWalterAttester(stepZeroMessageWalterToPeggy)
-        val stepZeroMessageWalterToVictor = walter.sendPublicKeyToVictor()
-        victor.stepZeroAddWalterVerifier(stepZeroMessageWalterToVictor)
+        repeat(howManyAttesters) { walterNumber ->
+            val walter = Walter("walter$walterNumber@fot.demo")
+            val stepZeroMessagePeggyToWalter = peggy.stepZeroSendMessageToWalter()
+            val stepZeroMessageWalterToPeggy = walter.signMessageAndSendToPeggy(stepZeroMessagePeggyToWalter)
+            peggy.stepZeroAddWalterAttester(stepZeroMessageWalterToPeggy)
+            val stepZeroMessageWalterToVictor = walter.sendPublicKeyToVictor()
+            victor.stepZeroAddWalterVerifier(stepZeroMessageWalterToVictor)
+        }
     }
 
     fun stepOne() {

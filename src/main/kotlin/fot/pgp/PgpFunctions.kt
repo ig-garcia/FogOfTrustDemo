@@ -53,7 +53,7 @@ fun pgpVerify(signedMessage: String, publicKey: PgpPublicKey): ByteArray {
         .bytes
 }
 
-fun generateKeyPair(userId: String): PgpKeyPair {
+fun generatePgpKeyPair(userId: String): PgpKeyPair {
     println("generating keypair for $userId...")
     val keyBytes = sop.generateKey()
         .userId(userId)
