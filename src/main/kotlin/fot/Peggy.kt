@@ -143,8 +143,8 @@ class Peggy(
             senderPgpPublicKey = victorPgpPublicKey
         )
         val stepThreeMessage = Json.decodeFromString<StepThreeMessage>(messagePlainText)
-        val session = sessions.first { it.sessionId == stepThreeMessage.sessionId }
-        val sessionId = session.sessionId
+        val sessionId = stepThreeMessage.sessionId
+        val session = recoverSession(sessionId)
         val blindingFactors = session.blindingFactors
         val blindedAttesters = session.blindedAttesters
         val salt = session.salt
@@ -173,6 +173,8 @@ class Peggy(
             ownPrivateKey = pgpPrivateKey
         )
     }
+
+    private fun recoverSession(sessionId: String) = sessions.first { it.sessionId == sessionId }
 
     private fun store(session: PeggySession) {
         sessions.removeIf { it.sessionId == session.sessionId }

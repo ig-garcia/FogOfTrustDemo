@@ -86,7 +86,7 @@ class FotDemo {
      */
     fun stepZero(message: Message) { // this is the "Preliminaries" of the thesis.
         peggy = Peggy(message)
-        victor = Victor(message, Participants(prover = "Peggy", verifier = "Victor"))
+        victor = Victor(Participants(prover = "Peggy", verifier = "Victor"), message)
         repeat(howManyAttesters) { walterNumber ->
             val walter = Walter("walter$walterNumber@fot.demo")
             val stepZeroMessagePeggyToWalter = peggy.stepZeroSendMessageToWalter()

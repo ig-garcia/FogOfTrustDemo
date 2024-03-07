@@ -6,8 +6,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class Victor(
-    private val message: Message,
     private val participants: Participants,
+    private var message: Message? = null,
     email: String = "victor@fot.sample",
 ) {
     private val trustedVerifiers = mutableSetOf<FotPublicKey>()
@@ -39,8 +39,11 @@ class Victor(
         trustedVerifiers.forEach { pk ->
             blindedVerifiers.add(blindFotPublicKey(pk, blindFactor))
         }
-        val sessionId = fotHash(Json.encodeToString(participants) + Json.encodeToString(message))
-
+        val sessionId =
+            if (message != null)
+                fotHash(Json.encodeToString(participants) + Json.encodeToString(message))
+            else
+                fotHash(Json.encodeToString(participants) + System.currentTimeMillis().toString())
         val session = VictorSession(
             sessionId = sessionId,
             blindFactor = blindFactor,
@@ -85,9 +88,10 @@ class Victor(
         )
 
         val sessionId = stepTwoMessage.sessionId
-        val session = sessions.first { it.sessionId == sessionId }
+        val session = recoverSession(sessionId)
         val k = stepTwoMessage.blindedAttesterHashes.size
         val blindFactor = session.blindFactor
+        this.message = stepTwoMessage.message
         val challenge = session.challenge.toMutableList()
         if (challenge.isEmpty()) {
             challenge.addAll(generateChallengeVector(k))
@@ -165,7 +169,7 @@ class Victor(
         )
         val stepFourMessage = Json.decodeFromString<StepFourMessage>(messagePlainText)
         val sessionId = stepFourMessage.sessionId
-        val session = sessions.first { it.sessionId == sessionId }
+        val session = recoverSession(sessionId)
         val challenge = session.challenge
         println("challenge: $challenge")
         val response = stepFourMessage.response
@@ -187,25 +191,27 @@ class Victor(
                 require(reblindedVerifierHashSet == peggyReblindedVerifierHashes[i])
             } else {
                 val (peggyBlindedAttesters, salt) = response[i] as BlindedAttestersAndSalt
-                val reblindedVerifierHashSet = mutableSetOf<String>()
+                val reblindedPeggyVerifierHashSet = mutableSetOf<String>()
                 val blindedAttesterHashSet = mutableSetOf<String>()
                 peggyBlindedAttesters.forEach { attester ->
                     val (signature, publicKey) = attester
                     // VERIFICATION IS DONE WITH BLINDED SIGNATURE AND PUBLIC KEY WHEN CHALLENGE BIT IS 1
-                    require(fotVerify(signature, publicKey, message))
+                    require(fotVerify(signature, publicKey, message!!))
                     blindedAttesterHashSet.add(fotHash("${Json.encodeToString(attester)}@#~$salt"))
-                    reblindedVerifierHashSet.add(fotHash(Json.encodeToString(blindFotPublicKey(publicKey, victorBlindFactor))))
+                    reblindedPeggyVerifierHashSet.add(fotHash(Json.encodeToString(blindFotPublicKey(publicKey, victorBlindFactor))))
                 }
                 require(blindedAttesterHashSet == peggyBlindedAttesterHashes[i])
                 if (trust == -1) {
-                    trust = (reblindedVerifierHashSet.intersect(peggyReblindedVerifierHashes[i])).size // assign trust first time
+                    trust = (reblindedPeggyVerifierHashSet.intersect(peggyReblindedVerifierHashes[i])).size // assign trust first time
                 } else {
-                    require(trust == (reblindedVerifierHashSet.intersect(peggyReblindedVerifierHashes[i]).size)) // verify its same trust next times
+                    require(trust == (reblindedPeggyVerifierHashSet.intersect(peggyReblindedVerifierHashes[i]).size)) // verify its same trust next times
                 }
             }
         }
         return trust
     }
+
+    private fun recoverSession(sessionId: String) = sessions.first { it.sessionId == sessionId }
 
     private fun store(session: VictorSession) {
         sessions.removeIf { it.sessionId == session.sessionId }
